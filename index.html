@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Riemann Swarm · 公开看板</title>
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--fg:#e6edf3;--dim:#8b949e;--accent:#58a6ff;--ok:#3fb950;--run:#d29922;--done:#a371f7}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .wrap{max-width:1080px;margin:auto;padding:36px 20px 72px}
+  h1{margin:0 0 6px;font-size:28px;letter-spacing:.3px}
+  .sub{color:var(--dim);margin-bottom:20px}
+  .notice{border:1px solid var(--run);background:#2b200f;color:#f0d58b;padding:10px 14px;border-radius:8px;margin:16px 0 28px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:28px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .stat b{display:block;font-size:26px;line-height:1.2}
+  .stat span{color:var(--dim);font-size:12px}
+  h2{font-size:17px;margin:32px 0 12px;border-bottom:1px solid var(--line);padding-bottom:8px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h3{margin:0 0 8px;font-size:15px}
+  .meta{color:var(--dim);font-size:12px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;margin-right:6px}
+  .available{color:var(--accent)}.claimed{color:var(--run)}.in-review{color:var(--ok)}.done{color:var(--done)}
+  a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+  table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left}
+  th{color:var(--dim);font-weight:500;font-size:12px}
+  code{background:#21262d;padding:1px 5px;border-radius:4px;font-size:12px}
+  footer{margin-top:40px;color:var(--dim);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Riemann Swarm · 公开看板</h1>
+  <div class="sub">基于 GitHub Issues / Actions / Pages 的黎曼猜想子任务协作台 · <a href="https://github.com/maunzec/riemann-swarm">仓库</a></div>
+  <div class="notice">黎曼猜想尚未解决。ACCEPTED 只表示对应子任务的冻结命题通过自动检查，不代表 RH 成立。</div>
+
+  <div class="stats" id="stats"></div>
+  <h2>任务</h2>
+  <div class="grid" id="tasks"></div>
+  <h2>公开贡献榜（首次通过的不同任务）</h2>
+  <table id="leaders"><thead><tr><th>#</th><th>GitHub 账号</th><th>通过任务</th></tr></thead><tbody></tbody></table>
+  <footer id="foot"></footer>
+</div>
+<script>
+fetch('data/board.json', {cache:'no-store'})
+  .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+  .then(b => {
+    const s = b.summary || {};
+    document.getElementById('stats').innerHTML = [
+      ['任务总数', s.tasks], ['已完成', s.done], ['进行中', s.claimed], ['验证记录', s.verdicts]
+    ].map(([k,v]) => `<div class="stat"><b>${v ?? '—'}</b><span>${k}</span></div>`).join('');
+
+    document.getElementById('tasks').innerHTML = (b.tasks||[]).map(t => {
+      const last = (t.verdicts||[]).slice(-1)[0];
+      return `<div class="card">
+        <h3>${t.id} · ${t.title}</h3>
+        <div><span class="pill ${t.status}">${t.status}</span><span class="pill">${t.type}</span><span class="pill">${t.milestone}</span></div>
+        <div class="meta" style="margin-top:8px">${t.assignees?.length ? '负责人：'+t.assignees.join(', ') : '尚未有人领取'}${t.parallel?' · 允许并行':''}</div>
+        ${last ? `<div class="meta">最近判定：<a href="${last.run_url}">${last.verdict}</a>${last.pr?' · PR #'+last.pr:''}</div>`:''}
+        ${t.issue_url ? `<div class="meta" style="margin-top:6px"><a href="${t.issue_url}">打开任务 Issue</a></div>`:''}
+      </div>`;
+    }).join('');
+
+    document.querySelector('#leaders tbody').innerHTML = (b.leaderboard||[]).length
+      ? b.leaderboard.map((u,i)=>`<tr><td>${i+1}</td><td>@${u.login}</td><td>${u.tasks.join(', ')}（${u.tasks.length}）</td></tr>`).join('')
+      : '<tr><td colspan="3" class="meta">暂无已通过任务。第一份通过验证的提交会记入榜单。</td></tr>';
+
+    document.getElementById('foot').textContent = `数据生成于 ${b.generated_at}`;
+  })
+  .catch(e => {
+    document.getElementById('tasks').innerHTML = `<div class="card">看板数据加载失败：${e.message}<br><span class="meta">本地直接打开文件时浏览器可能禁止 fetch；请通过 GitHub Pages 访问。</span></div>`;
+  });
+</script>
+</body>
+</html>
