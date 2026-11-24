@@ -2,7 +2,7 @@
 
 > **黎曼猜想尚未解决。** 本仓库把可独立审查的子命题拆成任务，用 GitHub 自带能力完成分发、领取、流转、提交、验证与记功。任何 `ACCEPTED` 只代表对应子任务的冻结命题通过检查，**不代表 RH 成立**。
 
-[设计方案 docs/DESIGN.md](docs/DESIGN.md) · [参与指南 CONTRIBUTING.md](CONTRIBUTING.md) · [任务清单 tasks/index.json](tasks/index.json) · [公开看板（Pages）](index.html)
+[设计方案 docs/DESIGN.md](docs/DESIGN.md) · [参与指南 CONTRIBUTING.md](CONTRIBUTING.md) · [任务清单 tasks/index.json](tasks/index.json) · [公开看板（Pages）](https://maunzec.github.io/riemann-swarm/)
 
 ## 三步加入
 
