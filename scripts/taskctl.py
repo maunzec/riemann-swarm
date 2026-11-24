@@ -52,7 +52,7 @@ def save(path, state):
 def available_issues():
     return json.loads(gh("issue", "list", "--state", "open", "--limit", "100",
                          "--label", "status:available",
-                         "--json", "number,title,labels,assignees"))
+                         "--json", "number,title,labels,assignees,url"))
 
 
 def registry():
@@ -114,7 +114,7 @@ def claim(task_id=None):
     }
     save(path, state)
     subprocess.run(["git", "switch", "-c", branch], check=True)
-    print(json.dumps({"task": real_id, "issue_url": issue.get("html_url"),
+    print(json.dumps({"task": real_id, "issue_url": issue.get("url"),
                       "branch": branch, "file": task["file"],
                       "statement": task["statement"]}, ensure_ascii=False, indent=2))
 
