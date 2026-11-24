@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 讨论与答疑 / Discussions
+    url: https://github.com/maunzec/riemann-swarm/discussions
+    about: 数学问题与流程答疑请到 Discussions，任务状态请留在 Issue。
+  - name: 参考研究台 / Goldbach desk
+    url: https://www.movan.tech/goldbach/?lang=zh#records
+    about: 参考项目的任务分发与验证记录。
