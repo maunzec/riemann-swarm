@@ -1,0 +1,98 @@
+name: claim
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+# GitHub 原生互斥锁：同一时刻只允许一个领取事务运行。
+concurrency:
+  group: task-claims
+  cancel-in-progress: false
+
+jobs:
+  claim:
+    if: >-
+      github.event.issue.pull_request == null &&
+      github.event.comment.user.type == 'User' &&
+      (github.event.comment.body == '/claim' || startsWith(github.event.comment.body, '/claim '))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ACTOR: ${{ github.event.comment.user.login }}
+      BODY: ${{ github.event.comment.body }}
+      COMMENTED_ISSUE: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reserve one available task atomically
+        run: |
+          python - <<'PY'
+          import datetime, os, re, subprocess, sys
+
+          body = os.environ["BODY"].strip()
+          actor = os.environ["ACTOR"]
+          commented = int(os.environ["COMMENTED_ISSUE"])
+          requested = body.split(maxsplit=1)[1].strip() if body.startswith("/claim ") else None
+          if requested and not re.fullmatch(r"RH-[0-9]{3}", requested):
+              sys.exit("REFUSED: task id must look like RH-001")
+
+          def gh(*args):
+              return subprocess.check_output(["gh", *args], text=True).strip()
+
+          issues = __import__("json").loads(gh(
+              "issue", "list", "--state", "open", "--limit", "100",
+              "--label", "status:available",
+              "--json", "number,title,labels,assignees"
+          ))
+
+          def available(row):
+              return not row.get("assignees")
+
+          chosen = None
+          if requested:
+              for row in issues:
+                  if available(row) and requested in row["title"]:
+                      chosen = row
+                      break
+          else:
+              for row in issues:
+                  if row["number"] == commented and available(row):
+                      chosen = row
+                      break
+              if chosen is None:
+                  for row in issues:
+                      if available(row):
+                          chosen = row
+                          break
+
+          if chosen is None:
+              reason = f"no available task matches {requested}" if requested else "no available task right now"
+              gh("issue", "comment", str(commented), "--repo", os.environ["REPO"],
+                 "--body", f"CLAIM REFUSED: {reason}.")
+              sys.exit(0)
+
+          number = str(chosen["number"])
+          # Re-check under the global lock: the issue must still be available.
+          fresh = __import__("json").loads(gh("issue", "view", number, "--repo", os.environ["REPO"],
+                                              "--json", "number,labels,assignees"))
+          if fresh.get("assignees") or not any(l["name"] == "status:available" for l in fresh["labels"]):
+              gh("issue", "comment", str(commented), "--repo", os.environ["REPO"],
+                 "--body", f"CLAIM REFUSED: {number} was taken just before this request. Retry /claim.")
+              sys.exit(0)
+
+          gh("issue", "edit", number, "--repo", os.environ["REPO"],
+             "--add-assignee", actor, "--remove-label", "status:available",
+             "--add-label", "status:claimed")
+          expires = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=72)).isoformat(timespec="seconds")
+          task_id = (re.search(r"RH-\d{3}", chosen["title"]) or [chosen["title"]])[0]
+          gh("issue", "comment", number, "--repo", os.environ["REPO"], "--body",
+             f"LEASE {task_id}\nassignee: @{actor}\nexpires_at: {expires}\n"
+             "租约 72 小时。续租评论 /beat，交接评论 `/handoff @user`，归还评论 `/release <reason>`。")
+          print(f"CLAIMED {task_id} issue #{number} by @{actor}")
+          PY
