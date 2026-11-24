@@ -220,9 +220,17 @@ riemann-swarm/
 
 ---
 
-## 9. 落地发布记录
+## 9. 落地发布记录（已实测）
 
-本仓库已按上述骨架创建并尝试发布到 GitHub。发布方式：使用本机已保存的 GitHub 凭据，通过 REST API 创建仓库、写入文件、建立 label / milestone / Issue，并启用 Pages 与 auto-merge。执行细节见最终交付说明；若网络或权限导致部分步骤失败，仓库内 `scripts/bootstrap_repo.py` 可补齐后续初始化。
+- 仓库：**<https://github.com/maunzec/riemann-swarm>**（公开，auto-merge 已开启）
+- 公开看板：**<https://maunzec.github.io/riemann-swarm/>**（HTTP 200）
+- 已发布：20 个初始文件、10 个 label、3 个 milestone、7 条 RH 任务 Issue，Pages + 5 个自定义 workflow。
+- 端到端自检：
+  - `sync-board` 工作流首次失败（缺 `GH_TOKEN` 环境变量、`gh issue list` 不支持 `html_url` 字段），修复后连续两次运行 **success**，`data/board.json` 已由 Actions 重新生成。
+  - `/claim RH-004` → `claim` 工作流 **success**，Issue #4 正确变为 `status:claimed` 且 Assignee=maunzec，并生成 72 小时租约评论。
+  - `/release smoke-test` → `handoff` 工作流 **success**，Issue #4 恢复 `status:available`、Assignee 清空。
+  - 全程未执行 PR 提交代码；验证工作流 `verify.yml` 需在真实 PR 上触发，尚无提交样本。
+- 发布方式：通过 GitHub REST API（本机已保存的 Git 凭据）创建仓库与内容；仓库内 `scripts/bootstrap_repo.py` 可在新 fork 上重建 label / milestone / Issue。
 
 ---
 
