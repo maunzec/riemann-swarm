@@ -1,0 +1,90 @@
+name: verify
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+        type: string
+      task:
+        description: Task id, e.g. RH-004
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: verify-${{ inputs.pr || github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request != null &&
+       github.event.comment.user.type == 'User' &&
+       startsWith(github.event.comment.body, '/verify '))
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      verdict: ${{ steps.result.outputs.verdict }}
+      task: ${{ steps.result.outputs.task }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ inputs.pr || github.event.issue.number }}
+      REQUESTED_TASK: ${{ inputs.task }}
+      BODY: ${{ github.event.comment.body }}
+      COMMENTER: ${{ github.event.comment.user.login }}
+      REPO: ${{ github.repository }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Validate request, fetch only the submitted file, run checker
+        run: |
+          python scripts/verify_task.py \
+            --pr "$PR" --task "${REQUESTED_TASK:-}" --body "$BODY" \
+            --commenter "$COMMENTER" --repo "$REPO" --out verdict.json
+
+      - id: result
+        name: Publish verdict and append immutable record
+        run: |
+          set -eu
+          verdict=$(jq -r .verdict verdict.json)
+          task=$(jq -r .task verdict.json)
+          echo "verdict=$verdict" >> "$GITHUB_OUTPUT"
+          echo "task=$task" >> "$GITHUB_OUTPUT"
+          {
+            printf 'VERDICT: %s\n\n' "$verdict"
+            printf 'task: `%s`\n' "$task"
+            printf 'head: `%s`\n' "$(jq -r .head verdict.json)"
+            printf 'statement_sha256: `%s`\n' "$(jq -r .statement_sha256 verdict.json)"
+            printf 'run: %s\n' "$(jq -r .run_url verdict.json)"
+            printf '\n<details><summary>checker output</summary>\n\n```\n'
+            jq -r .detail verdict.json | head -c 12000
+            printf '\n```\n</details>\n'
+          } > comment.md
+          gh pr comment "$PR" --repo "$REPO" --body-file comment.md
+          python - <<'PY'
+          import json, pathlib
+          v = json.loads(pathlib.Path("verdict.json").read_text(encoding="utf-8"))
+          p = pathlib.Path("data/verdicts.jsonl")
+          p.parent.mkdir(parents=True, exist_ok=True)
+          with p.open("a", encoding="utf-8") as f:
+              f.write(json.dumps(v, ensure_ascii=False, sort_keys=True) + "\n")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/verdicts.jsonl
+          if ! git diff --cached --quiet; then
+            git commit -m "record verdict ${task} PR #${PR}: ${verdict}"
+            git push
+          fi
