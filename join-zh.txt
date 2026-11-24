@@ -9,7 +9,7 @@ gh auth login --hostname github.com --web
 
 随后运行 gh api user --jq .login 核对账号。准备一个干净、专用的工作目录：
 
-git clone https://github.com/<owner>/riemann-swarm.git rh-work
+git clone https://github.com/maunzec/riemann-swarm.git rh-work
 cd rh-work
 
 2. 领取任务
