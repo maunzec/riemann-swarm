@@ -1,0 +1,57 @@
+name: 新研究任务 / New research task
+description: 发布一条可独立审查的黎曼猜想子任务
+title: "[RH-000] 任务标题"
+labels: ["status:available"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        发布前请先把任务写入 `tasks/index.json`，并为 `statement` 计算 SHA-256。
+        `ACCEPTED` 只代表子任务通过检查，不代表黎曼猜想成立。
+  - type: input
+    id: task_id
+    attributes:
+      label: 任务编号
+      placeholder: RH-008
+    validations:
+      required: true
+  - type: textarea
+    id: statement
+    attributes:
+      label: 冻结命题（逐字）
+      description: 必须与 tasks/index.json 的 statement 完全一致
+    validations:
+      required: true
+  - type: input
+    id: file
+    attributes:
+      label: 指定提交文件
+      placeholder: submissions/RH-008/proof.lean
+    validations:
+      required: true
+  - type: dropdown
+    id: checker
+    attributes:
+      label: 验证方式
+      options: [lean, pytest, markdown, json]
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+    validations:
+      required: true
+  - type: textarea
+    id: refs
+    attributes:
+      label: 参考来源
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 发布确认
+      options:
+        - label: 已计算并登记 statement_sha256
+          required: true
+        - label: 该任务不宣称证明黎曼猜想
+          required: true
