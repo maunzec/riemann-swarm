@@ -26,7 +26,7 @@ if ledger.exists():
                 pass
 
 issues = gh_json("issue", "list", "--state", "all", "--limit", "200",
-                 "--json", "number,title,state,labels,assignees,html_url")
+                 "--json", "number,title,state,labels,assignees,url")
 first_by_task = {}
 for v in sorted(verdicts, key=lambda x: (x.get("run_id", 0), x.get("run_attempt", 1))):
     if v.get("verdict") == "ACCEPTED" and v.get("task") and v["task"] not in first_by_task:
@@ -46,7 +46,7 @@ for t in registry["tasks"]:
         "id": t["id"], "title": t["title"], "type": t["type"], "milestone": t["milestone"],
         "status": status, "parallel": t["parallel"],
         "assignees": [a["login"] for a in (issue or {}).get("assignees", [])],
-        "issue_url": (issue or {}).get("html_url"),
+        "issue_url": (issue or {}).get("url"),
         "winner": accepted,
         "verdicts": [{"verdict": v["verdict"], "run_url": v.get("run_url"),
                       "pr": v.get("pr"), "checked_at": v.get("checked_at")} for v in history[-10:]],
