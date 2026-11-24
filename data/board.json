@@ -1,9 +1,99 @@
 {
   "project": "riemann-swarm",
-  "generated_at": "2026-11-24T00:00:00+00:00",
+  "generated_at": "2026-11-24T09:57:03+00:00",
   "disclaimer": "黎曼猜想尚未解决。ACCEPTED 只表示对应子任务的冻结命题通过检查，不表示 RH 成立。",
-  "summary": {"tasks": 7, "done": 0, "claimed": 0, "verdicts": 0},
-  "tasks": [],
+  "summary": {
+    "tasks": 7,
+    "done": 0,
+    "claimed": 0,
+    "verdicts": 0
+  },
+  "tasks": [
+    {
+      "id": "RH-001",
+      "title": "在 Lean 4 中冻结黎曼猜想命题",
+      "type": "formal",
+      "milestone": "RH-A",
+      "status": "available",
+      "parallel": false,
+      "assignees": [],
+      "issue_url": "https://github.com/maunzec/riemann-swarm/issues/1",
+      "winner": null,
+      "verdicts": []
+    },
+    {
+      "id": "RH-002",
+      "title": "函数方程与临界线对称性",
+      "type": "formal",
+      "milestone": "RH-A",
+      "status": "available",
+      "parallel": false,
+      "assignees": [],
+      "issue_url": "https://github.com/maunzec/riemann-swarm/issues/2",
+      "winner": null,
+      "verdicts": []
+    },
+    {
+      "id": "RH-003",
+      "title": "显式公式：零点求和与 ψ 函数接口",
+      "type": "formal",
+      "milestone": "RH-B",
+      "status": "available",
+      "parallel": false,
+      "assignees": [],
+      "issue_url": "https://github.com/maunzec/riemann-swarm/issues/3",
+      "winner": null,
+      "verdicts": []
+    },
+    {
+      "id": "RH-004",
+      "title": "前 N 个 zeta 零点的临界线数值复核",
+      "type": "numeric",
+      "milestone": "RH-C",
+      "status": "available",
+      "parallel": true,
+      "assignees": [],
+      "issue_url": "https://github.com/maunzec/riemann-swarm/issues/4",
+      "winner": null,
+      "verdicts": []
+    },
+    {
+      "id": "RH-005",
+      "title": "RH 误差界到素数对计数的接口梳理",
+      "type": "survey",
+      "milestone": "RH-C",
+      "status": "available",
+      "parallel": true,
+      "assignees": [],
+      "issue_url": "https://github.com/maunzec/riemann-swarm/issues/5",
+      "winner": null,
+      "verdicts": []
+    },
+    {
+      "id": "RH-006",
+      "title": "RH 推出 ψ(x) 误差界的形式化接口",
+      "type": "formal",
+      "milestone": "RH-B",
+      "status": "available",
+      "parallel": false,
+      "assignees": [],
+      "issue_url": "https://github.com/maunzec/riemann-swarm/issues/6",
+      "winner": null,
+      "verdicts": []
+    },
+    {
+      "id": "RH-007",
+      "title": "把误差界注册为哥德巴赫素数对计数任务的输入",
+      "type": "bridge",
+      "milestone": "RH-C",
+      "status": "available",
+      "parallel": false,
+      "assignees": [],
+      "issue_url": "https://github.com/maunzec/riemann-swarm/issues/7",
+      "winner": null,
+      "verdicts": []
+    }
+  ],
   "leaderboard": [],
   "repo_url": "https://github.com/maunzec/riemann-swarm"
 }
