@@ -1,0 +1,59 @@
+name: close-and-credit
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  credit:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      TITLE: ${{ github.event.pull_request.title }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
+      PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Close task issue and refresh board
+        run: |
+          python - <<'PY'
+          import json, os, re, subprocess, sys
+          title = os.environ["TITLE"]
+          m = re.search(r"RH-\d{3}", title)
+          if not m:
+              print("No task id in PR title; nothing to close.")
+              sys.exit(0)
+          task_id = m.group(0)
+          repo = os.environ["REPO"]
+
+          def gh(*args):
+              return subprocess.check_output(["gh", *args], text=True).strip()
+
+          issues = json.loads(gh("issue", "list", "--state", "open", "--limit", "100",
+                                 "--json", "number,title"))
+          hit = next((i for i in issues if task_id in i["title"]), None)
+          if hit:
+              n = str(hit["number"])
+              gh("issue", "edit", n, "--repo", repo,
+                 "--remove-label", "status:claimed", "--remove-label", "status:in-review",
+                 "--remove-label", "status:available", "--add-label", "status:done")
+              gh("issue", "close", n, "--repo", repo)
+              gh("issue", "comment", n, "--repo", repo, "--body",
+                 f"DONE {task_id}: 验证通过并已合并，记功 @{os.environ['PR_AUTHOR']}。\n{os.environ['PR_URL']}")
+              print(f"closed issue #{n} for {task_id}")
+          PY
+          python scripts/sync_board.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/board.json
+          if ! git diff --cached --quiet; then
+            git commit -m "update board after merge: ${TITLE}"
+            git push
+          fi
