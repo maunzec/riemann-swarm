@@ -9,7 +9,7 @@
 ```bash
 gh auth login --hostname github.com --web
 gh api user --jq .login     # 确认是本人账号
-git clone https://github.com/<owner>/riemann-swarm.git rh-work
+git clone https://github.com/maunzec/riemann-swarm.git rh-work
 cd rh-work
 ```
 
