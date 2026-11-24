@@ -1,0 +1,77 @@
+name: handoff
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  route:
+    if: >-
+      github.event.issue.pull_request == null &&
+      github.event.comment.user.type == 'User' &&
+      (startsWith(github.event.comment.body, '/handoff ') ||
+       startsWith(github.event.comment.body, '/release ') ||
+       github.event.comment.body == '/release' ||
+       github.event.comment.body == '/beat')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ACTOR: ${{ github.event.comment.user.login }}
+      ASSOCIATION: ${{ github.event.comment.author_association }}
+      BODY: ${{ github.event.comment.body }}
+      ISSUE: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Check permission and apply transition
+        run: |
+          python - <<'PY'
+          import datetime, json, os, re, subprocess, sys
+
+          body = os.environ["BODY"].strip()
+          actor = os.environ["ACTOR"]
+          association = os.environ["ASSOCIATION"]
+          issue = os.environ["ISSUE"]
+          repo = os.environ["REPO"]
+
+          def gh(*args):
+              return subprocess.check_output(["gh", *args], text=True).strip()
+
+          data = json.loads(gh("issue", "view", issue, "--repo", repo,
+                               "--json", "number,assignees,labels,title"))
+          assignees = [a["login"].casefold() for a in data.get("assignees", [])]
+          privileged = association in ("OWNER", "MEMBER", "COLLABORATOR")
+          if actor.casefold() not in assignees and not privileged:
+              gh("issue", "comment", issue, "--repo", repo,
+                 "--body", f"TRANSITION REFUSED: @{actor} 不是当前 Assignee，也无维护者权限。")
+              sys.exit(0)
+
+          if body.startswith("/handoff "):
+              target = body.split(maxsplit=1)[1].strip().lstrip("@")
+              if not re.fullmatch(r"[A-Za-z0-9-]{1,39}", target):
+                  sys.exit("REFUSED: invalid handle")
+              for old in assignees:
+                  gh("issue", "edit", issue, "--repo", repo, "--remove-assignee", old)
+              gh("issue", "edit", issue, "--repo", repo, "--add-assignee", target)
+              expires = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=72)).isoformat(timespec="seconds")
+              task_id = (re.search(r"RH-\d{3}", data["title"]) or [data["title"]])[0]
+              gh("issue", "comment", issue, "--repo", repo, "--body",
+                 f"HANDOFF {task_id}: @{actor} → @{target}\nnew expires_at: {expires}")
+              print(f"HANDOFF {task_id} @{actor} -> @{target}")
+          elif body == "/beat":
+              expires = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=72)).isoformat(timespec="seconds")
+              gh("issue", "comment", issue, "--repo", repo, "--body", f"LEASE RENEWED {expires}")
+              print("BEAT done")
+          else:
+              reason = body.split(maxsplit=1)[1].strip()[:200] if body.startswith("/release ") else "abandoned"
+              for old in assignees:
+                  gh("issue", "edit", issue, "--repo", repo, "--remove-assignee", old)
+              gh("issue", "edit", issue, "--repo", repo,
+                 "--remove-label", "status:claimed", "--add-label", "status:available")
+              gh("issue", "comment", issue, "--repo", repo, "--body", f"RELEASED: {reason}")
+              print("RELEASE done")
+          PY
