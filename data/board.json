@@ -1,6 +1,6 @@
 {
   "project": "riemann-swarm",
-  "generated_at": "2026-11-25T22:47:42+00:00",
+  "generated_at": "2026-11-26T05:02:05+00:00",
   "disclaimer": "黎曼猜想尚未解决。ACCEPTED 只表示对应子任务的冻结命题通过检查，不表示 RH 成立。",
   "summary": {
     "tasks": 7,
